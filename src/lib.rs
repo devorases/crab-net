@@ -31,7 +31,7 @@ pub async fn manager(params: Parameters) {
 
     for id in 0..params.connections {
         start_port += id;
-        let payload = generate_payloads(params.len);
+        let payload = params.payload.as_bytes().to_vec();
         let stats_tx_cloned = stats_tx.clone();
         let ca_file = ca_file.clone();
         if use_tls {
@@ -112,16 +112,13 @@ async fn setup_tls_stream(
     )
 }
 
-fn generate_payloads(len: usize) -> Vec<u8> {
-    repeat_with(|| fastrand::u8(..)).take(len).collect()
-}
 
 #[derive(new)]
 pub struct Parameters {
     server_addr: SocketAddr,
     rate: usize,
     connections: usize,
-    len: usize,
+    payload: String,
     start_port: usize,
     sleep: u64,
     connection_type: (bool, (bool, Option<String>)),

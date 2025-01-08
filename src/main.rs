@@ -45,12 +45,12 @@ fn build_cli() -> ArgMatches {
                 .value_parser(clap::value_parser!(usize)),
         )
         .arg(
-            Arg::new("length")
+            Arg::new("payload")
                 .short('l')
-                .long("length")
-                .help("Payload size as bytes")
-                .default_value("16")
-                .value_parser(clap::value_parser!(usize)),
+                .long("payload")
+                .help("Custom payload string to send")
+                .default_value("test")
+                .value_parser(clap::value_parser!(String)),
         )
         .arg(
             Arg::new("rate")
@@ -134,7 +134,8 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
         .unwrap();
     let rate = *matches.get_one("rate").unwrap();
     let connections = *matches.get_one("clients").unwrap();
-    let len = *matches.get_one("length").unwrap();
+    let payload = matches.get_one::<String>("payload").unwrap();
+    let len = payload.len();
     let start_port = *matches.get_one("port").unwrap();
     let sleep = *matches.get_one("timeout").unwrap();
 
@@ -156,7 +157,7 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
         server_addr,
         rate,
         connections,
-        len,
+        payload.to_string(),
         start_port,
         sleep,
         (use_udp, (use_tls, ca_file)),
