@@ -2,7 +2,7 @@ use std::net::ToSocketAddrs;
 
 use byte_unit::Byte;
 use clap::{Arg, ArgMatches, Command};
-use crab_net::{manager, Parameters};
+use crab_net::{manager, Parameters, payload::PayloadConfig};
 use log::{info, warn, LevelFilter};
 use mimalloc::MiMalloc;
 use simple_logger::SimpleLogger;
@@ -48,9 +48,27 @@ fn build_cli() -> ArgMatches {
             Arg::new("payload")
                 .short('l')
                 .long("payload")
-                .help("Custom payload string to send")
+                .help("Custom payload string to send (fallback if not using payload file)")
                 .default_value("test")
                 .allow_hyphen_values(true),
+        )
+        .arg(
+            Arg::new("payload-file")
+                .long("payload-file")
+                .help("YAML file containing multiple payloads")
+                .value_parser(clap::value_parser!(String)),
+        )
+        .arg(
+            Arg::new("payload-index")
+                .long("payload-index")
+                .help("Use specific payload index from file")
+                .value_parser(clap::value_parser!(usize)),
+        )
+        .arg(
+            Arg::new("random-payload")
+                .long("random-payload")
+                .help("Randomly select payload from file")
+                .action(clap::ArgAction::SetTrue),
         )
         .arg(
             Arg::new("rate")
@@ -134,8 +152,27 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
         .unwrap();
     let rate = *matches.get_one("rate").unwrap();
     let connections = *matches.get_one("clients").unwrap();
-    let payload = matches.get_one::<String>("payload").unwrap();
-    let len = payload.len();
+    let payload_file = matches.get_one::<String>("payload-file");
+    let payload_index = matches.get_one::<usize>("payload-index").copied();
+    let random_payload = matches.get_flag("random-payload");
+    
+    let payload_config = if let Some(file) = payload_file {
+        Some(PayloadConfig::from_file(file).unwrap())
+    } else {
+        None
+    };
+
+    let fallback_payload = matches.get_one::<String>("payload").unwrap().to_string();
+    let len = if let Some(config) = &payload_config {
+        if let Some(idx) = payload_index {
+            config.get_payload(Some(idx)).unwrap().len()
+        } else {
+            // Use first payload for size estimation
+            config.payloads[0].data.len()
+        }
+    } else {
+        fallback_payload.len()
+    };
     let start_port = *matches.get_one("port").unwrap();
     let sleep = *matches.get_one("timeout").unwrap();
 
@@ -157,7 +194,8 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
         server_addr,
         rate,
         connections,
-        payload.to_string(),
+        fallback_payload,
+        payload_config,
         start_port,
         sleep,
         (use_udp, (use_tls, ca_file)),
