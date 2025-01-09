@@ -1,0 +1,9 @@
+payloads:
+  - index: 0
+    data: "test"
+  - index: 1
+    data: "hello world"
+  - index: 2
+    data: "this is a longer test payload"
+  - index: 3
+    data: "!@#$%^&*()"
