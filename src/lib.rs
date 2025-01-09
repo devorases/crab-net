@@ -1,4 +1,5 @@
 use std::{fs, io::Error, net::SocketAddr, path::Path, time::Duration};
+use crate::payload::PayloadConfig;
 
 use derive_new::new;
 use log::error;
@@ -16,6 +17,7 @@ use tokio_native_tls::native_tls::{Certificate, TlsConnector};
 
 mod sender;
 mod statistics;
+pub mod payload;
 
 pub async fn manager(params: Parameters) {
     let (udp, (use_tls, ca_file)) = params.connection_type;
@@ -40,7 +42,7 @@ pub async fn manager(params: Parameters) {
                 let session =
                     setup_dtls_session(start_port, params.server_addr, ca_file.unwrap()).await;
                 tasks.spawn(async move {
-                    sender_task_dtls(id, session, payload_config, fallback_payload, params.rate, stats_tx_cloned).await
+                    sender_task_dtls(id, session, fallback_payload, params.rate, stats_tx_cloned).await
                 });
             } else {
                 let stream =
