@@ -17,6 +17,7 @@ Cargo.lock
 
 # Custom Payload
 payload.txt
+payloads.yml
 
 # OS generated files #
 ######################
