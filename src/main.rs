@@ -42,7 +42,8 @@ fn build_cli() -> ArgMatches {
                 .long("connections")
                 .help("Number of clients to simulate")
                 .default_value("1")
-                .value_parser(clap::value_parser!(usize)),
+                .value_parser(clap::value_parser!(usize))
+                .required(false),
         )
         .arg(
             Arg::new("payload")
@@ -56,7 +57,8 @@ fn build_cli() -> ArgMatches {
             Arg::new("payload-file")
                 .long("payload-file")
                 .help("YAML file containing multiple payloads")
-                .value_parser(clap::value_parser!(String)),
+                .value_parser(clap::value_parser!(String))
+                .required(false),
         )
         .arg(
             Arg::new("payload-index")
