@@ -9,7 +9,7 @@ pub struct PayloadEntry {
     pub data: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PayloadConfig {
     pub payloads: Vec<PayloadEntry>,
 }
