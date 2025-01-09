@@ -50,6 +50,7 @@ fn build_cli() -> ArgMatches {
                 .long("payload")
                 .help("Custom payload string to send")
                 .default_value("test")
+                .allow_hyphen_values(true)
                 .value_parser(clap::value_parser!(String)),
         )
         .arg(

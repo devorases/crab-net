@@ -1,4 +1,4 @@
-use std::{fs, io::Error, iter::repeat_with, net::SocketAddr, path::Path, time::Duration};
+use std::{fs, io::Error, net::SocketAddr, path::Path, time::Duration};
 
 use derive_new::new;
 use log::error;
