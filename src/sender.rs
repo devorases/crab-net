@@ -28,7 +28,7 @@ pub async fn sender_task_udp(
 
         for _ in 0..rate {
             let payload = if let Some(config) = &payload_config {
-                config.get_payload(None).unwrap().into_bytes()
+                config.get_payload(None, true).unwrap().into_bytes()
             } else {
                 fallback_payload.clone()
             };

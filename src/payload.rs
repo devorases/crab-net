@@ -23,12 +23,14 @@ impl PayloadConfig {
         Ok(config)
     }
 
-    pub fn get_payload(&self, index: Option<usize>) -> Option<String> {
-        match index {
-            Some(idx) => self.payloads.iter().find(|p| p.index == idx).map(|p| p.data.clone()),
-            None => {
-                let random_idx = fastrand::usize(..self.payloads.len());
-                Some(self.payloads[random_idx].data.clone())
+    pub fn get_payload(&self, index: Option<usize>, random: bool) -> Option<String> {
+        if random {
+            let random_idx = fastrand::usize(..self.payloads.len());
+            Some(self.payloads[random_idx].data.clone())
+        } else {
+            match index {
+                Some(idx) => self.payloads.iter().find(|p| p.index == idx).map(|p| p.data.clone()),
+                None => Some(self.payloads[0].data.clone()) // Default to first payload if no index specified
             }
         }
     }

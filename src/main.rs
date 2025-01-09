@@ -154,7 +154,7 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
     let connections = *matches.get_one("clients").unwrap();
     let payload_file = matches.get_one::<String>("payload-file");
     let payload_index = matches.get_one::<usize>("payload-index").copied();
-    let random_payload = matches.get_flag("random-payload");
+    let _random_payload = matches.get_flag("random-payload");
     
     let payload_config = if let Some(file) = payload_file {
         Some(PayloadConfig::from_file(file).unwrap())
@@ -165,7 +165,10 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
     let fallback_payload = matches.get_one::<String>("payload").unwrap().to_string();
     let len = if let Some(config) = &payload_config {
         if let Some(idx) = payload_index {
-            config.get_payload(Some(idx)).unwrap().len()
+            config.get_payload(Some(idx), false).unwrap().len()
+        } else if _random_payload {
+            // Use first payload for size estimation since actual payload will be random
+            config.payloads[0].data.len()
         } else {
             // Use first payload for size estimation
             config.payloads[0].data.len()
