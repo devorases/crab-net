@@ -12,7 +12,8 @@ use crate::{statistics::StatPacket, DtlsSession};
 pub async fn sender_task_udp(
     id: usize,
     socket: UdpSocket,
-    payload: Vec<u8>,
+    payload_config: Option<PayloadConfig>,
+    fallback_payload: Vec<u8>,
     rate: usize,
     stats_tx: AsyncSender<StatPacket>,
 ) {
@@ -22,14 +23,23 @@ pub async fn sender_task_udp(
     loop {
         let start_time = Instant::now();
         let mut packets_error = 0;
+        let mut bytes_sent = 0;
 
         for _ in 0..rate {
+            let payload = if let Some(config) = &payload_config {
+                config.get_payload(None).unwrap().into_bytes()
+            } else {
+                fallback_payload.clone()
+            };
+            
             if socket.send(&payload).await.is_err() {
                 packets_error += 1;
+            } else {
+                bytes_sent += payload.len();
             }
         }
 
-        send_stats(rate, payload.len(), packets_error, &stats_tx).await;
+        send_stats(rate, bytes_sent, packets_error, &stats_tx).await;
         maybe_sleep(start_time, one_sec).await;
     }
 }
@@ -62,7 +72,8 @@ pub async fn sender_task_dtls(
 pub async fn sender_task_tcp(
     id: usize,
     mut stream: Box<dyn AsyncWrite + Unpin + Send>,
-    payload: Vec<u8>,
+    payload_config: Option<PayloadConfig>,
+    fallback_payload: Vec<u8>,
     rate: usize,
     stats_tx: AsyncSender<StatPacket>,
 ) {
@@ -72,14 +83,23 @@ pub async fn sender_task_tcp(
     loop {
         let start_time = Instant::now();
         let mut packets_error = 0;
+        let mut bytes_sent = 0;
 
         for _ in 0..rate {
+            let payload = if let Some(config) = &payload_config {
+                config.get_payload(None).unwrap().into_bytes()
+            } else {
+                fallback_payload.clone()
+            };
+            
             if stream.write_all(&payload).await.is_err() {
                 packets_error += 1;
+            } else {
+                bytes_sent += payload.len();
             }
         }
 
-        send_stats(rate, payload.len(), packets_error, &stats_tx).await;
+        send_stats(rate, bytes_sent, packets_error, &stats_tx).await;
         maybe_sleep(start_time, one_sec).await;
     }
 }

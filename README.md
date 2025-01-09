@@ -37,10 +37,12 @@ To use a specific payload by index:
 ./crab-net -d 127.0.0.1:8080 --payload-file payloads.yml --payload-index 2
 ```
 
-To randomly select from available payloads:
+To continuously alternate between payloads randomly:
 ```bash
 ./crab-net -d 127.0.0.1:8080 --payload-file payloads.yml --random-payload
 ```
+
+This will randomly select a different payload for each packet sent, creating more varied traffic patterns.
 
 # Help
 

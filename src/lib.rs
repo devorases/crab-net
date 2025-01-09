@@ -31,7 +31,8 @@ pub async fn manager(params: Parameters) {
 
     for id in 0..params.connections {
         start_port += id;
-        let payload = params.payload.as_bytes().to_vec();
+        let fallback_payload = params.payload.as_bytes().to_vec();
+        let payload_config = params.payload_config.clone();
         let stats_tx_cloned = stats_tx.clone();
         let ca_file = ca_file.clone();
         if use_tls {
@@ -39,24 +40,24 @@ pub async fn manager(params: Parameters) {
                 let session =
                     setup_dtls_session(start_port, params.server_addr, ca_file.unwrap()).await;
                 tasks.spawn(async move {
-                    sender_task_dtls(id, session, payload, params.rate, stats_tx_cloned).await
+                    sender_task_dtls(id, session, payload_config, fallback_payload, params.rate, stats_tx_cloned).await
                 });
             } else {
                 let stream =
                     setup_tls_stream(start_port, params.server_addr, ca_file.unwrap()).await;
                 tasks.spawn(async move {
-                    sender_task_tcp(id, stream, payload, params.rate, stats_tx_cloned).await;
+                    sender_task_tcp(id, stream, payload_config, fallback_payload, params.rate, stats_tx_cloned).await
                 });
             }
         } else if udp {
             let socket = setup_udp_socket(params.server_addr, start_port).await;
             tasks.spawn(async move {
-                sender_task_udp(id, socket, payload, params.rate, stats_tx_cloned).await
+                sender_task_udp(id, socket, payload_config, fallback_payload, params.rate, stats_tx_cloned).await
             });
         } else {
             let stream = setup_tcp_stream(params.server_addr, start_port).await;
             tasks.spawn(async move {
-                sender_task_tcp(id, stream, payload, params.rate, stats_tx_cloned).await;
+                sender_task_tcp(id, stream, payload_config, fallback_payload, params.rate, stats_tx_cloned).await
             });
         }
         sleep(Duration::from_millis(params.sleep)).await;
@@ -118,7 +119,8 @@ pub struct Parameters {
     server_addr: SocketAddr,
     rate: usize,
     connections: usize,
-    payload: String,
+    payload_config: Option<PayloadConfig>,
+    payload: String, // fallback when not using payload_config
     start_port: usize,
     sleep: u64,
     connection_type: (bool, (bool, Option<String>)),
