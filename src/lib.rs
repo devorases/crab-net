@@ -1,11 +1,11 @@
-use std::{fs, io::Error, net::SocketAddr, path::Path, sync::Arc, time::Duration};
+use std::{fs, io::Error, net::SocketAddr, path::Path, time::Duration};
 use crate::payload::PayloadConfig;
 
 use derive_new::new;
 use log::{error, info};
 use openssl::ssl::{SslContext, SslMethod};
 use sender::{sender_task_dtls, sender_task_tcp, sender_task_udp};
-use statistics::{stats_task, StatsTracker};
+use statistics::stats_task;
 use tokio::{
     io::AsyncWrite,
     net::{TcpSocket, TcpStream, UdpSocket},

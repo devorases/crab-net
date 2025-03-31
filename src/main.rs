@@ -1,5 +1,4 @@
 use std::net::ToSocketAddrs;
-use std::sync::atomic::Ordering;
 
 use byte_unit::Byte;
 use clap::{Arg, ArgMatches, Command};
