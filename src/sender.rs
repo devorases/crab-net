@@ -2,6 +2,7 @@ use coarsetime::{Duration, Instant};
 use kanal::AsyncSender;
 use log::debug;
 use crate::payload::PayloadConfig;
+use crate::statistics::StatsTracker;
 use tokio::{
     io::{AsyncWrite, AsyncWriteExt},
     net::UdpSocket,
