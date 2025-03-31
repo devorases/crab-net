@@ -42,7 +42,12 @@ To continuously alternate between payloads randomly:
 ./crab-net -d 127.0.0.1:8080 --payload-file payloads.yml --random-payload --udp
 ```
 
-This will randomly select a different payload for each packet sent, creating more varied traffic patterns.
+To sequentially cycle through all payloads in order:
+```bash
+./crab-net -d 127.0.0.1:8080 --payload-file payloads.yml --sequential-payload --udp
+```
+
+The sequential mode will loop through each payload in the file in order, starting from the first payload and cycling back to the beginning after reaching the end. This creates predictable, repeating traffic patterns.
 
 # Auto-Quit and Statistics
 
@@ -72,6 +77,7 @@ Options:
       --payload-file <file>    YAML file containing multiple payloads
       --payload-index <index>  Use specific payload index from file
       --random-payload         Randomly select payload from file
+      --sequential-payload     Sequentially cycle through payloads from file
   -w, --workers <workers>      Number of worker threads for the Tokio runtime [default: #CPU core]
   -s, --timeout <timeout>      Timeout between consecutive connections spawn as ms [default: 50]
       --udp                    Send packets via UDP

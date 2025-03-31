@@ -13,10 +13,12 @@ use crate::{statistics::StatPacket, DtlsSession};
 pub async fn sender_task_udp(
     id: usize,
     socket: UdpSocket,
-    payload_config: Option<PayloadConfig>,
+    mut payload_config: Option<PayloadConfig>,
     fallback_payload: Vec<u8>,
     rate: usize,
     stats_tx: AsyncSender<StatPacket>,
+    sequential_payload: bool,
+    random_payload: bool,
 ) {
     debug!("client {id} spawned");
     let one_sec = Duration::new(1, 0);
@@ -27,8 +29,12 @@ pub async fn sender_task_udp(
         let mut bytes_sent = 0;
 
         for _ in 0..rate {
-            let payload = if let Some(config) = &payload_config {
-                config.get_payload(None, true).unwrap().into_bytes()
+            let payload = if let Some(config) = &mut payload_config {
+                let payload = config.get_payload(None, random_payload, sequential_payload).unwrap().into_bytes();
+                if sequential_payload {
+                    config.next_sequential_index();
+                }
+                payload
             } else {
                 fallback_payload.clone()
             };
@@ -73,10 +79,12 @@ pub async fn sender_task_dtls(
 pub async fn sender_task_tcp(
     id: usize,
     mut stream: Box<dyn AsyncWrite + Unpin + Send>,
-    payload_config: Option<PayloadConfig>,
+    mut payload_config: Option<PayloadConfig>,
     fallback_payload: Vec<u8>,
     rate: usize,
     stats_tx: AsyncSender<StatPacket>,
+    sequential_payload: bool,
+    random_payload: bool,
 ) {
     debug!("client {id} spawned");
     let one_sec = Duration::new(1, 0);
@@ -87,8 +95,12 @@ pub async fn sender_task_tcp(
         let mut bytes_sent = 0;
 
         for _ in 0..rate {
-            let payload = if let Some(config) = &payload_config {
-                config.get_payload(None, false).unwrap().into_bytes()
+            let payload = if let Some(config) = &mut payload_config {
+                let payload = config.get_payload(None, random_payload, sequential_payload).unwrap().into_bytes();
+                if sequential_payload {
+                    config.next_sequential_index();
+                }
+                payload
             } else {
                 fallback_payload.clone()
             };

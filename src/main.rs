@@ -72,6 +72,12 @@ fn build_cli() -> ArgMatches {
                 .required(false),
         )
         .arg(
+            Arg::new("sequential-payload")
+                .long("sequential-payload")
+                .help("Sequentially cycle through payloads from file")
+                .action(clap::ArgAction::SetTrue),
+        )
+        .arg(
             Arg::new("payload")
                 .short('l')
                 .long("payload")
@@ -182,7 +188,13 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
     let connections = *matches.get_one("clients").unwrap();
     let payload_file = matches.get_one::<String>("payload-file");
     let payload_index = matches.get_one::<usize>("payload-index").copied();
-    let _random_payload = matches.get_flag("random-payload");
+    let random_payload = matches.get_flag("random-payload");
+    let sequential_payload = matches.get_flag("sequential-payload");
+    
+    // Validate payload options
+    if random_payload && sequential_payload {
+        warn!("Both random-payload and sequential-payload specified. Using sequential mode.");
+    }
     
     let payload_config = if let Some(file) = payload_file {
         Some(PayloadConfig::from_file(file).unwrap())
@@ -193,9 +205,12 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
     let fallback_payload = matches.get_one::<String>("payload").unwrap().to_string();
     let len = if let Some(config) = &payload_config {
         if let Some(idx) = payload_index {
-            config.get_payload(Some(idx), false).unwrap().len()
-        } else if _random_payload {
+            config.get_payload(Some(idx), false, false).unwrap().len()
+        } else if random_payload {
             // Use first payload for size estimation since actual payload will be random
+            config.payloads[0].data.len()
+        } else if sequential_payload {
+            // Use first payload for size estimation since we'll cycle through all
             config.payloads[0].data.len()
         } else {
             // Use first payload for size estimation
@@ -235,5 +250,7 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
         sleep,
         (use_udp, (use_tls, ca_file)),
         max_packets,
+        sequential_payload,
+        random_payload,
     )
 }

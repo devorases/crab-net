@@ -41,6 +41,9 @@ pub async fn manager(params: Parameters) -> usize {
         let payload_config = params.payload_config.clone();
         let stats_tx_cloned = stats_tracker.tx.clone();
         let ca_file = ca_file.clone();
+        let sequential_payload = params.sequential_payload;
+        let random_payload = params.random_payload;
+        
         if use_tls {
             if udp {
                 let session =
@@ -52,18 +55,21 @@ pub async fn manager(params: Parameters) -> usize {
                 let stream =
                     setup_tls_stream(start_port, params.server_addr, ca_file.unwrap()).await;
                 tasks.spawn(async move {
-                    sender_task_tcp(id, stream, payload_config, fallback_payload, params.rate, stats_tx_cloned).await
+                    sender_task_tcp(id, stream, payload_config, fallback_payload, params.rate, stats_tx_cloned, 
+                                   sequential_payload, random_payload).await
                 });
             }
         } else if udp {
             let socket = setup_udp_socket(params.server_addr, start_port).await;
             tasks.spawn(async move {
-                sender_task_udp(id, socket, payload_config, fallback_payload, params.rate, stats_tx_cloned).await
+                sender_task_udp(id, socket, payload_config, fallback_payload, params.rate, stats_tx_cloned,
+                               sequential_payload, random_payload).await
             });
         } else {
             let stream = setup_tcp_stream(params.server_addr, start_port).await;
             tasks.spawn(async move {
-                sender_task_tcp(id, stream, payload_config, fallback_payload, params.rate, stats_tx_cloned).await
+                sender_task_tcp(id, stream, payload_config, fallback_payload, params.rate, stats_tx_cloned,
+                               sequential_payload, random_payload).await
             });
         }
         sleep(Duration::from_millis(params.sleep)).await;
@@ -144,6 +150,8 @@ pub struct Parameters {
     sleep: u64,
     connection_type: (bool, (bool, Option<String>)),
     max_packets: Option<usize>, // Maximum number of packets to send before quitting
+    sequential_payload: bool,   // Use sequential payloads from file
+    random_payload: bool,       // Use random payloads from file
 }
 
 #[derive(new)]
