@@ -22,12 +22,15 @@ fn main() {
     let rt = build_runtime(&cli);
     
     // Create a channel for graceful shutdown
-    let (shutdown_tx, shutdown_rx) = std::sync::mpsc::channel();
+    let (shutdown_tx, _shutdown_rx) = std::sync::mpsc::channel();
     
-    // Setup Ctrl+C handler
+    // Setup Ctrl+C handler to terminate the process
     ctrlc::set_handler(move || {
         info!("Received Ctrl+C, shutting down gracefully...");
         let _ = shutdown_tx.send(());
+        // Give a short time for the message to be logged
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::process::exit(0);
     }).expect("Error setting Ctrl+C handler");
     
     // Run the manager and get total packets sent
