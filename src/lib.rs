@@ -1,11 +1,11 @@
-use std::{fs, io::Error, net::SocketAddr, path::Path, time::Duration};
+use std::{fs, io::Error, net::SocketAddr, path::Path, sync::Arc, time::Duration};
 use crate::payload::PayloadConfig;
 
 use derive_new::new;
-use log::error;
+use log::{error, info};
 use openssl::ssl::{SslContext, SslMethod};
 use sender::{sender_task_dtls, sender_task_tcp, sender_task_udp};
-use statistics::stats_task;
+use statistics::{stats_task, StatsTracker};
 use tokio::{
     io::AsyncWrite,
     net::{TcpSocket, TcpStream, UdpSocket},
@@ -19,15 +19,19 @@ mod sender;
 mod statistics;
 pub mod payload;
 
-pub async fn manager(params: Parameters) {
+pub async fn manager(params: Parameters) -> usize {
     let (udp, (use_tls, ca_file)) = params.connection_type;
     if use_tls && ca_file.is_none() {
         error!("DTLS requires CA file to verify server credentials");
-        return;
+        return 0;
     }
 
-    let stats_tx = stats_task(params.connections);
-
+    // Setup quit channel for auto-termination
+    let (quit_tx, mut quit_rx) = tokio::sync::mpsc::channel::<()>(1);
+    
+    // Initialize stats tracker with max packets if specified
+    let stats_tracker = stats_task(params.connections, params.max_packets, Some(quit_tx));
+    
     let mut tasks = JoinSet::new();
     let mut start_port = params.start_port;
 
@@ -35,7 +39,7 @@ pub async fn manager(params: Parameters) {
         start_port += id;
         let fallback_payload = params.payload.as_bytes().to_vec();
         let payload_config = params.payload_config.clone();
-        let stats_tx_cloned = stats_tx.clone();
+        let stats_tx_cloned = stats_tracker.tx.clone();
         let ca_file = ca_file.clone();
         if use_tls {
             if udp {
@@ -64,7 +68,20 @@ pub async fn manager(params: Parameters) {
         }
         sleep(Duration::from_millis(params.sleep)).await;
     }
-    while (tasks.join_next().await).is_some() {}
+    
+    // Wait for either quit signal or all tasks to complete
+    tokio::select! {
+        _ = quit_rx.recv() => {
+            info!("Received quit signal, shutting down...");
+            tasks.abort_all();
+        }
+        _ = async { while (tasks.join_next().await).is_some() {} } => {
+            info!("All tasks completed");
+        }
+    }
+    
+    // Return the total number of packets sent
+    stats_tracker.get_total_packets()
 }
 
 async fn setup_udp_socket(addr: SocketAddr, port: usize) -> UdpSocket {
@@ -126,6 +143,7 @@ pub struct Parameters {
     start_port: usize,
     sleep: u64,
     connection_type: (bool, (bool, Option<String>)),
+    max_packets: Option<usize>, // Maximum number of packets to send before quitting
 }
 
 #[derive(new)]

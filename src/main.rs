@@ -1,4 +1,5 @@
 use std::net::ToSocketAddrs;
+use std::sync::atomic::Ordering;
 
 use byte_unit::Byte;
 use clap::{Arg, ArgMatches, Command};
@@ -7,6 +8,7 @@ use log::{info, warn, LevelFilter};
 use mimalloc::MiMalloc;
 use simple_logger::SimpleLogger;
 use tokio::runtime::{Builder, Runtime};
+use ctrlc;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -19,10 +21,24 @@ fn main() {
 
     let cli = build_cli();
     let rt = build_runtime(&cli);
-
-    rt.block_on(async {
-        manager(extract_parameters(cli)).await;
+    
+    // Create a channel for graceful shutdown
+    let (shutdown_tx, shutdown_rx) = std::sync::mpsc::channel();
+    
+    // Setup Ctrl+C handler
+    ctrlc::set_handler(move || {
+        info!("Received Ctrl+C, shutting down gracefully...");
+        let _ = shutdown_tx.send(());
+    }).expect("Error setting Ctrl+C handler");
+    
+    // Run the manager and get total packets sent
+    let total_packets = rt.block_on(async {
+        let params = extract_parameters(cli);
+        manager(params).await
     });
+    
+    // Print final statistics
+    info!("Total packets sent: {}", total_packets);
 }
 
 fn build_cli() -> ArgMatches {
@@ -42,6 +58,14 @@ fn build_cli() -> ArgMatches {
                 .long("connections")
                 .help("Number of clients to simulate")
                 .default_value("1")
+                .value_parser(clap::value_parser!(usize))
+                .required(false),
+        )
+        .arg(
+            Arg::new("max-packets")
+                .short('m')
+                .long("max-packets")
+                .help("Maximum number of packets to send before quitting")
                 .value_parser(clap::value_parser!(usize))
                 .required(false),
         )
@@ -190,8 +214,12 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
     let use_udp = *matches.get_one("udp").unwrap();
     let use_tls = *matches.get_one("tls").unwrap();
     let ca_file = matches.get_one("ca").cloned();
+    let max_packets = matches.get_one::<usize>("max-packets").copied();
 
     info!("Server address: {server_addr}, clients: {connections}, payload size: {len}, rate: {rate} pkt/s, sleep timeout:{sleep} ms, udp: {use_udp}, tls: {use_tls}");
+    if let Some(max) = max_packets {
+        info!("Will quit after sending {max} packets");
+    }
     info!("Theoretical Packets rate: {} pkt/sec", connections * rate);
     info!("Theoretical Bandwidth: {bandwidth} bit/s");
 
@@ -204,5 +232,6 @@ fn extract_parameters(matches: ArgMatches) -> Parameters {
         start_port,
         sleep,
         (use_udp, (use_tls, ca_file)),
+        max_packets,
     )
 }

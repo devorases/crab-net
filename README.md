@@ -44,6 +44,16 @@ To continuously alternate between payloads randomly:
 
 This will randomly select a different payload for each packet sent, creating more varied traffic patterns.
 
+# Auto-Quit and Statistics
+
+You can set the tool to automatically quit after sending a specific number of packets:
+
+```bash
+./crab-net -d 127.0.0.1:8080 --udp -m 1000
+```
+
+This will send exactly 1000 packets and then exit. When the tool quits (either automatically or via Ctrl+C), it will display the total number of packets sent during the session.
+
 # Help
 
 ```
@@ -55,6 +65,7 @@ Usage: crab-net [OPTIONS] --destination <addr>
 Options:
   -d, --destination <addr>      Server address as IP:PORT
   -c, --connections <clients>   Number of clients to simulate [default: 1]
+  -m, --max-packets <max>      Maximum number of packets to send before quitting
   -r, --rate <rate>            Defined as packets/sec [default: 1]
   -p, --port <port>            Starting source port for clients [default: 8000]
   -l, --payload <payload>      Custom payload string to send [default: test]
